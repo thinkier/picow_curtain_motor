@@ -1,0 +1,9 @@
+services:
+  builder:
+    image: ghcr.io/thinkier/pico-build
+    environment:
+      PICO_BOARD: pico_w
+      WIFI_SSID: "${WIFI_SSID}"
+      WIFI_PASSWORD: "${WIFI_PASSWORD}"
+    volumes:
+      - .:/env/pico-project
