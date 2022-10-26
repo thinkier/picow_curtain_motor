@@ -39,18 +39,20 @@ def wifi_connect():
         wlan.active(False)
 
     ip = wlan.ifconfig()[0]
-    print('Connected; ip = ' + ip)
+    print('WiFi connected; ip = ' + ip)
     return wlan
 
 def push_poll(state: State):
     try:
-        payload = {'at_pct': state.get_percentage()}
+        payload = {'current_pct': state.get_cur_percentage(), 'target_pct': state.get_tgt_percentage()}
         res = requests.post('http://192.168.1.69:44444/' + NAME, json = payload)
         rej = res.json()
         state.set_percentage(rej['target_pct'])
+        time.sleep_ms(1000)
         return True
     except OSError:
-        print('Failed to fetch')
+        print('Failed to poll HomeBridge server')
+        time.sleep_ms(500)
         return False
 
 class State:
@@ -76,8 +78,11 @@ class State:
         pct = max(min(pct, 100), 0)
         self.target_steps = round(pct * self.max_steps / 100)
         
-    def get_percentage(self):
+    def get_cur_percentage(self):
         return round(100 * self.steps / self.max_steps)
+      
+    def get_tgt_percentage(self):
+        return round(100 * self.target_steps / self.max_steps)
       
     def move_task(self, timer: Timer):
         if not self.pin_end.value():
@@ -115,6 +120,7 @@ while True:
             consec_fail = 0
             
         if consec_fail > 10:
+            print('Reinitializing WiFi...')
             wlan.active(False)
             break
 

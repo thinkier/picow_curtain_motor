@@ -1,0 +1,30 @@
+{
+  "name": "homebridge-window-dressing",
+  "version": "0.2.0-alpha.1",
+  "description": "",
+  "main": "lib/index.js",
+  "scripts": {
+    "prepack": "npm run build",
+    "build": "tsc",
+    "postpack": "npm run clean",
+    "clean": "rm -rf lib"
+  },
+  "keywords": [
+    "homebridge-plugin"
+  ],
+  "files": [
+    "lib/**/*",
+    "config.schema.json"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^16",
+    "homebridge": ">=0.2",
+    "typescript": "^4.5.5"
+  },
+  "engines": {
+    "node": ">=0.12.0",
+    "homebridge": ">=0.2.0"
+  }
+}

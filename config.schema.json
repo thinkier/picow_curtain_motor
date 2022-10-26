@@ -1,0 +1,18 @@
+{
+  "pluginAlias": "CurtainMotorPlugin",
+  "pluginType": "accessory",
+  "schema": {
+    "name": {
+      "title": "Name",
+      "type": "string",
+      "placeholder": "Name",
+      "default": "window_dressing"
+    },
+    "port": {
+      "title": "HTTP API Server Port",
+      "type": "number",
+      "placeholder": "44444",
+	  "default": 44444
+    }
+  }
+}
