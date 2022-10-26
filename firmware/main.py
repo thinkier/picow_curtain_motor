@@ -4,7 +4,7 @@ import rp2
 import urequests as requests
 import ujson as json
 
-from machine import Pin
+from machine import Pin, Timer
 from secrets import WIFI_SSID, WIFI_PASS
 
 
@@ -40,17 +40,24 @@ def wifi_connect():
 
     ip = wlan.ifconfig()[0]
     print('Connected; ip = ' + ip)
+    return wlan
 
 def push_poll(state: State):
-    payload = {'at_pct': state.get_percentage()}
-    res = requests.post('http://192.168.1.69:44444/' + NAME, json = payload)
-    rej = res.json()
-    state.set_percentage(rej['target_pct'])
+    try:
+        payload = {'at_pct': state.get_percentage()}
+        res = requests.post('http://192.168.1.69:44444/' + NAME, json = payload)
+        rej = res.json()
+        state.set_percentage(rej['target_pct'])
+        return True
+    except OSError:
+        print('Failed to fetch')
+        return False
 
 class State:
     max_steps = round(STEPS_PER_MM * BLINDS_HEIGHT)
     reverse_dir = REVERSE_DIR
-    half_step_delay_ms = 500 / PHASE_PER_SECOND
+    full_step_delay_ms = 1000 / PHASE_PER_SECOND
+    half_step_delay_ms = full_step_delay_ms / 2
     steps = 0
     target_steps = 0
     
@@ -59,6 +66,11 @@ class State:
         self.pin_dir = Pin(PIN_DIR, Pin.OUT)
         self.pin_ena = Pin(PIN_ENA, Pin.OUT)
         self.pin_end = Pin(PIN_END, Pin.IN, Pin.PULL_UP)
+        self.timer = Timer()
+        self.timer.init(period=int(self.full_step_delay_ms), mode=Timer.PERIODIC, callback=self.move_task)
+    
+    def __del__(self):
+        self.timer.deinit()
     
     def set_percentage(self, pct = 0):
         pct = max(min(pct, 100), 0)
@@ -66,8 +78,8 @@ class State:
         
     def get_percentage(self):
         return round(100 * self.steps / self.max_steps)
-    
-    def poll_move(self):
+      
+    def move_task(self, timer: Timer):
         if not self.pin_end.value():
             # Reset step count when an endstop is reached
             self.steps = self.target_steps
@@ -89,11 +101,20 @@ class State:
         self.pin_stp.on()
         time.sleep_ms(half_step_delay_ms)
         self.pin_stp.off()
-        time.sleep_ms(half_step_delay_ms)
-        
 
-wifi_connect()
 state = State()
-push_poll(state)
 
+while True:
+    wlan = wifi_connect()
+    
+    consec_fail = 0
+    while True:
+        if not push_poll(state):
+            consec_fail += 1
+        else:
+            consec_fail = 0
+            
+        if consec_fail > 10:
+            wlan.active(False)
+            break
 
