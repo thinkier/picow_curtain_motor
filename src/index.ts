@@ -20,6 +20,8 @@ export = (api: API) => {
     api.registerAccessory("WindowDressingPlugin", WindowDressingPlugin);
 };
 
+const TIMEOUT_THRESHOLD = 10e3;
+
 class WindowDressingPlugin implements AccessoryPlugin {
     private readonly name: string;
     private readonly informationService: Service;
@@ -28,6 +30,7 @@ class WindowDressingPlugin implements AccessoryPlugin {
     private server;
     private current_pct: number = 0;
     private target_pct: number = -1;
+    private last_check: number = 0;
 
     constructor(private readonly log: Logging, private readonly config: Config, api: API) {
         this.name = config.name;
@@ -41,11 +44,11 @@ class WindowDressingPlugin implements AccessoryPlugin {
         this.service = new hap.Service.WindowCovering(this.name);
         this.service.getCharacteristic(hap.Characteristic.CurrentPosition)
             .on(CharacteristicEventTypes.GET, (callback: CharacteristicGetCallback) => {
-                callback(HAPStatus.SUCCESS, this.current_pct);
+                this.answer(callback, this.current_pct);
             })
         this.service.getCharacteristic(hap.Characteristic.TargetPosition)
             .on(CharacteristicEventTypes.GET, (callback: CharacteristicGetCallback) => {
-                callback(HAPStatus.SUCCESS, this.getClampedTargetPct());
+                this.answer(callback, this.getClampedTargetPct());
             })
             .on(CharacteristicEventTypes.SET, (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
                 this.target_pct = value as number;
@@ -62,10 +65,19 @@ class WindowDressingPlugin implements AccessoryPlugin {
                 } else if (delta < 0) {
                     state = hap.Characteristic.PositionState.DECREASING;
                 }
-                callback(HAPStatus.SUCCESS, state);
+                this.answer(callback, state);
             });
 
         log.info("Window Dressing finished initializing!");
+    }
+
+    answer = (callback: CharacteristicGetCallback, state: CharacteristicValue) => {
+        // 10 second timeout
+        if (Date.now() - this.last_check < TIMEOUT_THRESHOLD) {
+            callback(HAPStatus.SUCCESS, state);
+        } else {
+            callback(HAPStatus.OPERATION_TIMED_OUT)
+        }
     }
 
     getClampedTargetPct = () => {
@@ -98,6 +110,7 @@ class WindowDressingPlugin implements AccessoryPlugin {
                         return;
                     }
                     this.current_pct = current_pct;
+                    this.last_check = Date.now();
 
                     // Write current to target
                     if (this.target_pct === -1) {
