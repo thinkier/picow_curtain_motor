@@ -65,7 +65,7 @@ class WindowDressingPlugin implements AccessoryPlugin {
                 callback(HAPStatus.SUCCESS, state);
             });
 
-        log.info("Curtain Motor finished initializing!");
+        log.info("Window Dressing finished initializing!");
     }
 
     getClampedTargetPct = () => {
@@ -76,13 +76,18 @@ class WindowDressingPlugin implements AccessoryPlugin {
         if (req.method === "POST" && req.headers["content-type"] === "application/json") {
             req.setEncoding("utf8");
             let body = "";
-            req.on("readable", () => body += req.read())
+            req.on("readable", () => {
+                let read = req.read();
+                if (read) {
+                    body += read;
+                }
+            })
                 .on("end", () => {
                     let data;
                     try {
                         data = JSON.parse(body);
                     } catch (ex) {
-                        console.error("Request Parse Error:", ex);
+                        console.error(body, "\n\nRequest Parse Error:", ex);
                         res.writeHead(400).end("Bad Request: Bad JSON");
                         return;
                     }
