@@ -7,7 +7,7 @@ from machine import Pin, Timer
 from secrets import WIFI_SSID, WIFI_PASS
 
 
-NAME = 'window_dressing'
+NAME = 'Roller%20Blinds'
 PHASE_PER_SECOND = 1000
 STEPS_PER_MM = 6.9
 BLINDS_HEIGHT = 1000
