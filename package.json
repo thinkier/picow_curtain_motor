@@ -1,6 +1,6 @@
 {
   "name": "homebridge-window-dressing",
-  "version": "0.2.0-alpha.1",
+  "version": "0.2.0",
   "description": "",
   "main": "lib/index.js",
   "scripts": {
@@ -21,7 +21,7 @@
   "devDependencies": {
     "@types/node": "^16",
     "homebridge": ">=0.2",
-    "typescript": "^4.5.5"
+    "typescript": "^4.8.4"
   },
   "engines": {
     "node": ">=0.12.0",

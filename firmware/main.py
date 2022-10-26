@@ -2,7 +2,6 @@ import time
 import network
 import rp2
 import urequests as requests
-import ujson as json
 
 from machine import Pin, Timer
 from secrets import WIFI_SSID, WIFI_PASS
