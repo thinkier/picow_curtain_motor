@@ -3,7 +3,7 @@ import network
 import rp2
 import urequests as requests
 
-from machine import Pin, Timer
+from machine import Pin, PWM, Timer
 from secrets import WIFI_SSID, WIFI_PASS
 
 
@@ -47,11 +47,9 @@ def push_poll(state: State):
         res = requests.post('http://192.168.1.69:44444/' + NAME, json = payload)
         rej = res.json()
         state.set_percentage(rej['target_pct'])
-        time.sleep_ms(1000)
         return True
     except OSError:
         print('Failed to poll HomeBridge server')
-        time.sleep_ms(500)
         return False
 
 class State:
@@ -61,9 +59,14 @@ class State:
     half_step_delay_us = int(1000 * full_step_delay_ms / 2)
     steps = 0
     target_steps = 0
+    endstop_initial_lock = False
 
     def __init__(self):
         self.pin_stp = Pin(PIN_STP, Pin.OUT)
+        self.pwm_stp = PWM(self.pin_stp)
+        self.pwm_stp.freq(PHASE_PER_SECOND)
+        self.pwm_stp.duty_u16(1 << 15)
+        
         self.pin_dir = Pin(PIN_DIR, Pin.OUT)
         self.pin_ena = Pin(PIN_ENA, Pin.OUT)
         self.pin_end = Pin(PIN_END, Pin.IN, Pin.PULL_UP)
@@ -74,6 +77,7 @@ class State:
         self.timer.deinit()
 
     def set_percentage(self, pct = 0):
+        self.endstop_initial_lock = self.pin_end.value()
         pct = max(min(pct, 100), 0)
         self.target_steps = round(pct * self.max_steps / 100)
 
@@ -84,7 +88,10 @@ class State:
         return round(100 * self.target_steps / self.max_steps)
 
     def move_task(self, timer: Timer):
-        if not self.pin_end.value():
+        if self.endstop_initial_lock:
+            if self.pin_end.value():
+                self.endstop_initial_lock = False
+        elif not self.pin_end.value():
             # Reset step count when an endstop is reached
             self.steps = self.target_steps
 
@@ -101,10 +108,10 @@ class State:
         # Engage Stepper
         self.pin_ena.value(0)
 
-        # Send a fairly accurately-timed square phase
-        self.pin_stp.on()
-        time.sleep_us(self.half_step_delay_us)
-        self.pin_stp.off()
+        ## Send a fairly accurately-timed square phase
+        #self.pin_stp.on()
+        #time.sleep_us(self.half_step_delay_us)
+        #self.pin_stp.off()
 
 state = State()
 
@@ -114,12 +121,15 @@ while True:
     consec_fail = 0
     while True:
         if not push_poll(state):
+            time.sleep_ms(1000)
             consec_fail += 1
         else:
             consec_fail = 0
-
+            time.sleep_ms(200)
+    
         if consec_fail > 10:
             print('Reinitializing WiFi...')
             wlan.active(False)
             break
+
 
