@@ -13,10 +13,10 @@ STEPS_PER_MM = 6.9
 BLINDS_HEIGHT = 1000
 REVERSE_DIR = False
 
-PIN_STP = 2
-PIN_DIR = 4
-PIN_ENA = 6
-PIN_END = 8
+PIN_STP = 7
+PIN_DIR = 10
+PIN_ENA = 15
+PIN_END = 3
 
 
 def wifi_connect():
@@ -45,7 +45,6 @@ def push_poll(state: State):
     try:
         payload = {'current_pct': state.get_cur_percentage(), 'target_pct': state.get_tgt_percentage()}
         res = requests.post('http://192.168.1.69:44444/' + NAME, json = payload)
-        print("HomeBridge Appliance Said: " + res.text)
         rej = res.json()
         state.set_percentage(rej['target_pct'])
         time.sleep_ms(1000)
@@ -123,3 +122,4 @@ while True:
             print('Reinitializing WiFi...')
             wlan.active(False)
             break
+
