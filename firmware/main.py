@@ -77,7 +77,7 @@ class State:
         self.timer.deinit()
 
     def set_percentage(self, pct = 0):
-        self.endstop_initial_lock = self.pin_end.value()
+        self.endstop_initial_lock = not self.pin_end.value()
         pct = max(min(pct, 100), 0)
         self.target_steps = round(pct * self.max_steps / 100)
 
