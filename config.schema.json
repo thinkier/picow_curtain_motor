@@ -1,5 +1,5 @@
 {
-  "pluginAlias": "CurtainMotorPlugin",
+  "pluginAlias": "WindowDressingPlugin",
   "pluginType": "accessory",
   "schema": {
     "name": {
