@@ -73,38 +73,44 @@ class WindowDressingPlugin implements AccessoryPlugin {
     }
 
     httpListener: RequestListener = (req, res) => {
-        try {
-            if (req.method === "POST" && req.headers["content-type"] === "application/json") {
-                req.setEncoding("utf8");
-                let body = JSON.parse(req.read(512));
-
-                let current_pct = Number.parseInt(body["current_pct"]);
-                if (current_pct < 0 || current_pct > 100) {
-                    res.writeHead(400).end("current_pct must be 0-100 inclusive");
-                    return;
-                }
-                this.current_pct = current_pct;
-
-                // Write current to target
-                if (this.target_pct === -1) {
-                    let target_pct = Number.parseInt(body["target_pct"]);
-                    if (target_pct < 0 || target_pct > 100) {
-                        res.writeHead(400).end("target_pct must be 0-100 inclusive");
+        if (req.method === "POST" && req.headers["content-type"] === "application/json") {
+            req.setEncoding("utf8");
+            let body = "";
+            req.on("readable", () => body += req.read())
+                .on("end", () => {
+                    let data;
+                    try {
+                        data = JSON.parse(body);
+                    } catch (ex) {
+                        console.error("Request Parse Error:", ex);
+                        res.writeHead(400).end("Bad Request: Bad JSON");
                         return;
                     }
-                    this.target_pct = target_pct;
-                }
-            } else {
-                res.writeHead(400).end("Bad Request");
-            }
-        } catch (ex) {
-            res.writeHead(400).end("Bad Request");
-            console.error("Request Error: ", ex);
-        }
 
-        res.writeHead(200, {
-            "content-type": "application/json"
-        }).end(JSON.stringify({"target_pct": this.target_pct}));
+                    let current_pct = Number.parseInt(data["current_pct"]);
+                    if (current_pct < 0 || current_pct > 100) {
+                        res.writeHead(400).end("Bad Request: Bad JSON: current_pct must be 0-100 inclusive");
+                        return;
+                    }
+                    this.current_pct = current_pct;
+
+                    // Write current to target
+                    if (this.target_pct === -1) {
+                        let target_pct = Number.parseInt(data["target_pct"]);
+                        if (target_pct < 0 || target_pct > 100) {
+                            res.writeHead(400).end("Bad Request: Bad JSON: target_pct must be 0-100 inclusive");
+                            return;
+                        }
+                        this.target_pct = target_pct;
+                    }
+
+                    res.writeHead(200, {
+                        "content-type": "application/json"
+                    }).end(JSON.stringify({"target_pct": this.target_pct}));
+                });
+        } else {
+            res.writeHead(400).end("Bad Request: Not POST with application/json");
+        }
     }
 
 
