@@ -10,7 +10,7 @@ from secrets import WIFI_SSID, WIFI_PASS
 NAME = 'Roller%20Blinds'
 PHASE_PER_SECOND = 1000
 STEPS_PER_MM = 6.9
-BLINDS_HEIGHT = 1000
+BLINDS_HEIGHT = 1050
 REVERSE_DIR = False
 
 PIN_STP = 7
@@ -87,10 +87,16 @@ class State:
     def get_tgt_percentage(self):
         return round(100 * self.target_steps / self.max_steps)
 
+    endstop_timer_lock = False
+    def release_lock(self, timer: Timer):
+        self.endstop_initial_lock = False
+        self.endstop_timer_lock = False
+
     def move_task(self, timer: Timer):
         if self.endstop_initial_lock:
-            if self.pin_end.value():
-                self.endstop_initial_lock = False
+            if not self.endstop_timer_lock and self.pin_end.value():
+                self.endstop_timer_lock = True
+                Timer(period=500, mode=Timer.ONE_SHOT, callback=self.release_lock)
         elif not self.pin_end.value():
             # Reset step count when an endstop is reached
             self.steps = self.target_steps
