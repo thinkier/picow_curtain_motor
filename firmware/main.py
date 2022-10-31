@@ -1,3 +1,4 @@
+import gc
 import time
 import network
 import rp2
@@ -48,7 +49,7 @@ def push_poll(state: State):
         rej = res.json()
         state.set_percentage(rej['target_pct'])
         return True
-    except OSError:
+    except:
         print('Failed to poll HomeBridge server')
         return False
 
@@ -70,6 +71,11 @@ class State:
         self.pin_dir = Pin(PIN_DIR, Pin.OUT)
         self.pin_ena = Pin(PIN_ENA, Pin.OUT)
         self.pin_end = Pin(PIN_END, Pin.IN, Pin.PULL_UP)
+        
+        # Set to max value if the endstop is not pressed on boot
+        if self.pin_end.value():
+            self.steps = self.max_steps
+        
         self.timer = Timer()
         self.timer.init(period=int(self.full_step_delay_ms), mode=Timer.PERIODIC, callback=self.move_task)
 
@@ -114,16 +120,10 @@ class State:
         # Engage Stepper
         self.pin_ena.value(0)
 
-        ## Send a fairly accurately-timed square phase
-        #self.pin_stp.on()
-        #time.sleep_us(self.half_step_delay_us)
-        #self.pin_stp.off()
-
 state = State()
 
 while True:
     wlan = wifi_connect()
-
     consec_fail = 0
     while True:
         if not push_poll(state):
@@ -132,7 +132,8 @@ while True:
         else:
             consec_fail = 0
             time.sleep_ms(200)
-    
+        gc.collect()
+        
         if consec_fail > 10:
             print('Reinitializing WiFi...')
             wlan.active(False)
